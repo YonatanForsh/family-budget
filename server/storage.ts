@@ -78,10 +78,12 @@ export class DatabaseStorage implements IStorage {
     }
     
     if (filter?.month) {
-      // month is YYYY-MM
-      const startDate = new Date(`${filter.month}-01`);
-      const endDate = new Date(startDate);
-      endDate.setMonth(endDate.getMonth() + 1);
+      const userSettings = await this.getSettings(userId);
+      const resetDay = userSettings?.resetDay || 1;
+      
+      const [year, m] = filter.month.split('-').map(Number);
+      const startDate = new Date(year, m - 1, resetDay);
+      const endDate = new Date(year, m, resetDay);
       
       conditions.push(gte(expenses.date, startDate));
       conditions.push(lte(expenses.date, endDate));
@@ -137,15 +139,36 @@ export class DatabaseStorage implements IStorage {
 
   // Stats
   async getMonthlyStats(userId: string, month?: string): Promise<MonthlyStats> {
-    const currentMonth = month || new Date().toISOString().slice(0, 7);
-    const startDate = new Date(`${currentMonth}-01`);
-    const endDate = new Date(startDate);
-    endDate.setMonth(endDate.getMonth() + 1);
+    const userSettings = await this.getSettings(userId);
+    const resetDay = userSettings?.resetDay || 1;
+    
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth(); // 0-indexed
+    
+    let startDate: Date;
+    let endDate: Date;
+
+    if (month) {
+      // If a specific month is requested (YYYY-MM), we use the resetDay for that month
+      const [year, m] = month.split('-').map(Number);
+      startDate = new Date(year, m - 1, resetDay);
+      endDate = new Date(year, m, resetDay);
+    } else {
+      // Logic for current budget cycle based on resetDay
+      if (now.getDate() >= resetDay) {
+        startDate = new Date(currentYear, currentMonth, resetDay);
+        endDate = new Date(currentYear, currentMonth + 1, resetDay);
+      } else {
+        startDate = new Date(currentYear, currentMonth - 1, resetDay);
+        endDate = new Date(currentYear, currentMonth, resetDay);
+      }
+    }
 
     // Get all categories
     const userCategories = await this.getCategories(userId);
     
-    // Get expenses for the month
+    // Get expenses for the period
     const userExpenses = await db.select()
       .from(expenses)
       .where(and(
