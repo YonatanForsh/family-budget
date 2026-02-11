@@ -1,0 +1,92 @@
+Subject: Family Budget App with Gamified Motivation and Smart Shifting
+
+Context:
+Build a web application for a small family budget management. The app should be "vibe-coded" to be light, fun, colorful but professional, and highly encouraging.
+
+Core Technical Requirements:
+
+Language: The UI and all messages must be in Hebrew.
+
+Tech Stack: Use React for frontend and a persistent database (Postgres/Replit DB) for the backend.
+
+Authentication: Simple user login for family members to share one account.
+
+RTL Support: Ensure the layout is Right-to-Left (Hebrew friendly).
+
+Key Features:
+
+Dynamic Dashboard: A "Fuel Gauge" or progress ring showing total monthly budget.
+
+Category Management: Users can create/edit categories. If a category is over 100%, use a gentle, non-stressful color warning.
+
+Smart Reset Date: A setting to choose the day of the month for budget reset.
+
+"Borrow" Feature: Allow users to move funds from a surplus category to one that is over budget.
+
+Fixed Expenses: Automated monthly deductions (Rent, etc.).
+
+History: View and analyze spending from previous months.
+
+7. Motivational Feedback Logic:
+Whenever an expense is added, display a random message from this list in a nice popup:
+
+"נרשם! כל שקל שנשמר פה הוא שקל שיושקע בחלומות שלכם. 🌟"
+
+"אחלה עבודה! שליטה בתקציב היא הדרך הכי מהירה לחופש כלכלי. 💸"
+
+"נרשם במערכת. צמצום קטן פה, חופשה גדולה שם! 🏖️"
+
+"כל רישום מקרב אתכם ליעד השנתי. אלופים! 🏆"
+
+"המודעות שלכם היום היא השקט הנפשי שלכם מחר. 🧘‍♂️"
+
+"סחתין על המעקב! הידע הוא הכוח שלכם מול הבנק. 💪"
+
+"נרשם! זכרו: עושר לא נמדד בכמה מרוויחים, אלא בכמה שומרים. 💰"
+
+"עוד צעד קטן לניהול חכם. המשפחה שלכם תודה לכם! ❤️"
+
+"נהדר! אתם מנהלים את הכסף במקום שהוא ינהל אתכם. 🧭"
+
+"קיבלתי! הדיוק הזה משתלם, תרתי משמע. 📈"
+
+"יופי של רישום. כל טיפה בים יוצרת אוקיינוס של ביטחון. 🌊"
+
+"הבקרה הזו היא מה שמבדיל בין חלום לתכנית עבודה. 📋"
+
+"נרשם! אתם בדרך הנכונה לסיים את החודש בירוק. ✅"
+
+"כל הכבוד על האחריות! זה ממש לא מובן מאליו. ✨"
+
+"נרשם בהצלחה. המשמעת שלכם היום היא המתנה שלכם למחר. 🎁"
+
+"יש! עוד הוצאה תחת שליטה. אתם בוסים של הכסף שלכם. 😎"
+
+"נרשם. המשיכו ככה, הסטטיסטיקה לטובתכם! 📊"
+
+"עוד לבנה בחומה של היציבות הכלכלית שלכם. 🧱"
+
+"כל הכבוד! מעקב צמוד הוא סוד ההצלחה. 🤫"
+
+"נרשם! פשוט, קליל וחכם. בדיוק כמוכם. 🧠"
+
+8. Over-Budget Comforting Logic:
+If an expense causes a category to exceed 100%, show the negative balance clearly but display a random comforting message:
+
+"חריגה קטנה, לא סוף העולם. מחר יום חדש של בחירות חכמות. 🌱"
+
+"אופס, חרגנו קצת... לא נורא! בשביל זה יש לנו קטגוריות אחרות ללוות מהן. 🤝"
+
+"קצת חרגנו הפעם, אבל המודעות שלכם היא הניצחון האמיתי. ממשיכים קדימה! 🧡"
+
+"החודש הזה קצת מאתגר, וזה בסדר. העיקר שאנחנו עם היד על הדופק. 💓"
+
+"אז הייתה חריגה... זה קורה גם למשפחות הכי מתוכננות. בואו ננסה לאזן בשבוע הבא. ⚖️"
+
+"אל תתנו למספר האדום להוריד אתכם. אתם לומדים את השטח וזה הכי חשוב. 💡"
+
+"חריגה היא רק הזדמנות לתכנן טוב יותר את החודש הבא. אנחנו יחד בזה! ✨"
+
+"אז הוצאנו קצת יותר, אבל אנחנו לא עוצרים. הדרך חשובה יותר מהמעידה. 🚀"
+
+Please respond and build the app in Hebrew.
