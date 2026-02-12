@@ -1,6 +1,6 @@
 import { useMonthlyStats } from "@/hooks/use-budget";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
+import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TrendingDown, TrendingUp, AlertCircle } from "lucide-react";
 
@@ -13,17 +13,22 @@ export function BudgetOverview() {
 
   if (!stats) return null;
 
-  // Calculate percentage
-  const percentage = stats.totalBudget > 0 
-    ? Math.min(Math.round((stats.totalSpent / stats.totalBudget) * 100), 100) 
+  const totalSpent = Number(stats.totalSpent);
+  const totalBudget = Number(stats.totalBudget);
+  
+  // Half-circle gauge logic
+  // We want to show spending as a portion of the semi-circle
+  // If we exceed budget, the gauge stays full but we show the total
+  const percentage = totalBudget > 0 
+    ? Math.round((totalSpent / totalBudget) * 100) 
     : 0;
   
-  const isOverBudget = stats.totalSpent > stats.totalBudget;
-  const remainingPercentage = Math.max(0, 100 - percentage);
+  const displayPercentage = Math.min(percentage, 100);
+  const isOverBudget = totalSpent > totalBudget;
 
   const data = [
-    { name: "נוצל", value: stats.totalSpent, color: isOverBudget ? "#ef4444" : "#8b5cf6" },
-    { name: "נותר", value: Math.max(0, stats.remaining), color: "#e2e8f0" },
+    { name: "נוצל", value: displayPercentage, color: isOverBudget ? "#ef4444" : "#8b5cf6" },
+    { name: "נותר", value: 100 - displayPercentage, color: "#e2e8f0" },
   ];
 
   return (
@@ -39,33 +44,30 @@ export function BudgetOverview() {
       </CardHeader>
       <CardContent>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
-          <div className="h-[200px] w-full relative flex items-center justify-center">
+          <div className="h-[180px] w-full relative flex items-center justify-center">
              <ResponsiveContainer width="100%" height="100%">
                <PieChart>
                  <Pie
                    data={data}
                    cx="50%"
-                   cy="50%"
-                   innerRadius={60}
-                   outerRadius={80}
-                   paddingAngle={5}
+                   cy="80%"
+                   innerRadius={80}
+                   outerRadius={110}
+                   startAngle={180}
+                   endAngle={0}
+                   paddingAngle={0}
                    dataKey="value"
-                   startAngle={90}
-                   endAngle={-270}
+                   stroke="none"
                  >
                    {data.map((entry, index) => (
-                     <Cell key={`cell-${index}`} fill={entry.color} strokeWidth={0} />
+                     <Cell key={`cell-${index}`} fill={entry.color} />
                    ))}
                  </Pie>
-                 <Tooltip 
-                    formatter={(value: number) => `₪${value.toLocaleString()}`}
-                    contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
-                 />
                </PieChart>
              </ResponsiveContainer>
-             <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-               <span className="text-3xl font-black text-foreground">{percentage}%</span>
-               <span className="text-xs text-muted-foreground">נוצל</span>
+             <div className="absolute top-[60%] left-0 w-full flex flex-col items-center justify-center pointer-events-none">
+               <span className={`text-4xl font-black ${isOverBudget ? 'text-red-500' : 'text-foreground'}`}>{percentage}%</span>
+               <span className="text-sm text-muted-foreground font-medium">מהתקציב הכולל</span>
              </div>
           </div>
 
@@ -73,12 +75,12 @@ export function BudgetOverview() {
             <div className="grid grid-cols-2 gap-4">
               <div className="bg-white dark:bg-black/20 p-4 rounded-xl shadow-sm border border-purple-100 dark:border-white/5">
                 <div className="text-sm text-muted-foreground mb-1">סך הכל תקציב</div>
-                <div className="text-2xl font-bold text-foreground">₪{Number(stats.totalBudget).toLocaleString()}</div>
+                <div className="text-2xl font-bold text-foreground">₪{totalBudget.toLocaleString()}</div>
               </div>
               <div className="bg-white dark:bg-black/20 p-4 rounded-xl shadow-sm border border-purple-100 dark:border-white/5">
                 <div className="text-sm text-muted-foreground mb-1">סך הכל הוצאות</div>
                 <div className={`text-2xl font-bold ${isOverBudget ? 'text-red-500' : 'text-primary'}`}>
-                  ₪{Number(stats.totalSpent).toLocaleString()}
+                  ₪{totalSpent.toLocaleString()}
                 </div>
               </div>
             </div>
@@ -93,7 +95,7 @@ export function BudgetOverview() {
                 <div className="font-bold">{isOverBudget ? "חריגה מהתקציב!" : "כל הכבוד!"}</div>
                 <div className="text-sm opacity-90">
                   {isOverBudget 
-                    ? `חרגת ב-₪${(stats.totalSpent - stats.totalBudget).toLocaleString()}. כדאי להעביר תקציב מקטגוריה אחרת.` 
+                    ? `חרגת ב-₪${(totalSpent - totalBudget).toLocaleString()}. כדאי להעביר תקציב מקטגוריה אחרת.` 
                     : `נותרו לך ₪${stats.remaining.toLocaleString()} להוצאות החודש.`}
                 </div>
               </div>
@@ -102,5 +104,7 @@ export function BudgetOverview() {
         </div>
       </CardContent>
     </Card>
+  );
+}
   );
 }

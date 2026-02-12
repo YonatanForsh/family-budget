@@ -109,11 +109,9 @@ function CategoryItem({ category }: { category: Category & { spent: number; rema
       <Progress 
         value={percentage} 
         className="h-2.5 bg-secondary/20" 
-        indicatorClassName={cn(isOverBudget ? "bg-destructive" : "")}
-        style={{ 
-          // Override the default background color variable for the indicator if not over budget
-          "--primary": isOverBudget ? undefined : category.color 
-        } as any}
+        indicatorClassName={cn(
+          percentage > 90 ? "bg-red-500" : percentage > 70 ? "bg-orange-500" : "bg-green-500"
+        )}
       />
       
       {isOverBudget && (
