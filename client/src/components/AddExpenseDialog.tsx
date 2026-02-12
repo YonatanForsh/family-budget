@@ -94,15 +94,20 @@ export function AddExpenseDialog() {
         if (category && (Number(category.spent) + Number(data.amount) > Number(category.budgetLimit))) {
            message = comfortingMessages[Math.floor(Math.random() * comfortingMessages.length)];
            title = "שים לב: חריגה מהתקציב";
-           // We don't make it red (destructive) to keep it comforting, maybe just default style
+           variant = "destructive"; // More visible alert for over-budget
         }
+      } else if (stats && (Number(stats.totalSpent) + Number(data.amount) > Number(stats.totalBudget))) {
+          // Check total budget as well
+          message = comfortingMessages[Math.floor(Math.random() * comfortingMessages.length)];
+          title = "חריגה מהתקציב הכולל";
+          variant = "destructive";
       }
 
       toast({
         title,
         description: message,
         variant,
-        duration: 5000,
+        duration: 8000,
       });
 
     } catch (error) {
