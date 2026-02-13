@@ -25,7 +25,39 @@ export const expenses = pgTable("expenses", {
 export const settings = pgTable("settings", {
   id: serial("id").primaryKey(),
   resetDay: integer("reset_day").notNull().default(1),
+  lastResetDate: timestamp("last_reset_date"), // Track when the last reset happened
   userId: varchar("user_id").notNull().references(() => users.id).unique(),
+});
+
+export const fixedExpenses = pgTable("fixed_expenses", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  amount: numeric("amount").notNull(),
+  categoryId: integer("category_id").references(() => categories.id),
+  userId: varchar("user_id").notNull().references(() => users.id),
+});
+
+export const shoppingLists = pgTable("shopping_lists", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  isRecurring: boolean("is_recurring").notNull().default(false),
+  userId: varchar("user_id").notNull().references(() => users.id),
+});
+
+export const shoppingListItems = pgTable("shopping_list_items", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  amount: text("amount"), // text to allow "1 unit", "2 kg", etc.
+  isCompleted: boolean("is_completed").notNull().default(false),
+  listId: integer("list_id").notNull().references(() => shoppingLists.id),
+});
+
+export const budgetHistory = pgTable("budget_history", {
+  id: serial("id").primaryKey(),
+  month: text("month").notNull(), // YYYY-MM
+  totalBudget: numeric("total_budget").notNull(),
+  totalSpent: numeric("total_spent").notNull(),
+  userId: varchar("user_id").notNull().references(() => users.id),
 });
 
 // Relations
@@ -35,16 +67,39 @@ export const categoriesRelations = relations(categories, ({ one, many }) => ({
     references: [users.id],
   }),
   expenses: many(expenses),
+  fixedExpenses: many(fixedExpenses),
 }));
 
-export const expensesRelations = relations(expenses, ({ one }) => ({
+export const fixedExpensesRelations = relations(fixedExpenses, ({ one }) => ({
   user: one(users, {
-    fields: [expenses.userId],
+    fields: [fixedExpenses.userId],
     references: [users.id],
   }),
   category: one(categories, {
-    fields: [expenses.categoryId],
+    fields: [fixedExpenses.categoryId],
     references: [categories.id],
+  }),
+}));
+
+export const shoppingListsRelations = relations(shoppingLists, ({ one, many }) => ({
+  user: one(users, {
+    fields: [shoppingLists.userId],
+    references: [users.id],
+  }),
+  items: many(shoppingListItems),
+}));
+
+export const shoppingListItemsRelations = relations(shoppingListItems, ({ one }) => ({
+  list: one(shoppingLists, {
+    fields: [shoppingListItems.listId],
+    references: [shoppingLists.id],
+  }),
+}));
+
+export const budgetHistoryRelations = relations(budgetHistory, ({ one }) => ({
+  user: one(users, {
+    fields: [budgetHistory.userId],
+    references: [users.id],
   }),
 }));
 
@@ -71,7 +126,22 @@ export const insertExpenseSchema = createInsertSchema(expenses)
   });
 
 export const insertSettingsSchema = createInsertSchema(settings)
+  .omit({ id: true, userId: true, lastResetDate: true });
+
+export const insertFixedExpenseSchema = createInsertSchema(fixedExpenses)
+  .omit({ id: true, userId: true })
+  .extend({
+    amount: z.number().or(z.string().regex(/^\d+(\.\d{1,2})?$/)),
+  });
+
+export const insertShoppingListSchema = createInsertSchema(shoppingLists)
   .omit({ id: true, userId: true });
+
+export const insertShoppingListItemSchema = createInsertSchema(shoppingListItems)
+  .omit({ id: true });
+
+export const insertBudgetHistorySchema = createInsertSchema(budgetHistory)
+  .omit({ id: true });
 
 
 // Types
@@ -83,6 +153,18 @@ export type InsertExpense = z.infer<typeof insertExpenseSchema>;
 
 export type Settings = typeof settings.$inferSelect;
 export type InsertSettings = z.infer<typeof insertSettingsSchema>;
+
+export type FixedExpense = typeof fixedExpenses.$inferSelect;
+export type InsertFixedExpense = z.infer<typeof insertFixedExpenseSchema>;
+
+export type ShoppingList = typeof shoppingLists.$inferSelect;
+export type InsertShoppingList = z.infer<typeof insertShoppingListSchema>;
+
+export type ShoppingListItem = typeof shoppingListItems.$inferSelect;
+export type InsertShoppingListItem = z.infer<typeof insertShoppingListItemSchema>;
+
+export type BudgetHistory = typeof budgetHistory.$inferSelect;
+export type InsertBudgetHistory = z.infer<typeof insertBudgetHistorySchema>;
 
 // API Types
 export type MonthlyStats = {
