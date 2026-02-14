@@ -1,7 +1,7 @@
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { LogOut, User as UserIcon, Settings as SettingsIcon, LayoutDashboard } from "lucide-react";
+import { LogOut, User as UserIcon, Settings as SettingsIcon, LayoutDashboard, ShoppingBasket } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import {
   DropdownMenu,
@@ -43,6 +43,12 @@ export function Header() {
             <Button variant={location === "/settings" ? "secondary" : "ghost"} size="sm" className="hidden sm:flex gap-2">
               <SettingsIcon className="h-4 w-4" />
               הגדרות
+            </Button>
+          </Link>
+          <Link href="/shopping">
+            <Button variant={location === "/shopping" ? "secondary" : "ghost"} size="sm" className="hidden sm:flex gap-2">
+              <ShoppingBasket className="h-4 w-4" />
+              רשימת קניות
             </Button>
           </Link>
 

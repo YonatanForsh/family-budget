@@ -143,6 +143,32 @@ export const api = {
       },
     },
   },
+  shopping: {
+    list: {
+      method: 'GET' as const,
+      path: '/api/shopping' as const,
+    },
+    createList: {
+      method: 'POST' as const,
+      path: '/api/shopping' as const,
+    },
+    deleteList: {
+      method: 'DELETE' as const,
+      path: '/api/shopping/:id' as const,
+    },
+    addItem: {
+      method: 'POST' as const,
+      path: '/api/shopping/:listId/items' as const,
+    },
+    updateItem: {
+      method: 'PATCH' as const,
+      path: '/api/shopping/items/:id' as const,
+    },
+    deleteItem: {
+      method: 'DELETE' as const,
+      path: '/api/shopping/items/:id' as const,
+    },
+  },
 };
 
 export function buildUrl(path: string, params?: Record<string, string | number>): string {

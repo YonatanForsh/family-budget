@@ -60,7 +60,42 @@ export const budgetHistory = pgTable("budget_history", {
   userId: varchar("user_id").notNull().references(() => users.id),
 });
 
-// Relations
+export const shoppingLists = pgTable("shopping_lists", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  userId: varchar("user_id").notNull().references(() => users.id),
+});
+
+export const shoppingListItems = pgTable("shopping_list_items", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  amount: text("amount"),
+  isCompleted: boolean("is_completed").notNull().default(false),
+  listId: integer("list_id").notNull().references(() => shoppingLists.id),
+});
+
+export const shoppingListsRelations = relations(shoppingLists, ({ one, many }) => ({
+  user: one(users, {
+    fields: [shoppingLists.userId],
+    references: [users.id],
+  }),
+  items: many(shoppingListItems),
+}));
+
+export const shoppingListItemsRelations = relations(shoppingListItems, ({ one }) => ({
+  list: one(shoppingLists, {
+    fields: [shoppingListItems.listId],
+    references: [shoppingLists.id],
+  }),
+}));
+
+export const insertShoppingListSchema = createInsertSchema(shoppingLists).omit({ id: true, userId: true });
+export const insertShoppingListItemSchema = createInsertSchema(shoppingListItems).omit({ id: true });
+
+export type ShoppingList = typeof shoppingLists.$inferSelect;
+export type ShoppingListItem = typeof shoppingListItems.$inferSelect;
+export type InsertShoppingList = z.infer<typeof insertShoppingListSchema>;
+export type InsertShoppingListItem = z.infer<typeof insertShoppingListItemSchema>;
 export const categoriesRelations = relations(categories, ({ one, many }) => ({
   user: one(users, {
     fields: [categories.userId],

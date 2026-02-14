@@ -161,5 +161,38 @@ export async function registerRoutes(
     res.json(stats);
   });
 
+  // Shopping Lists
+  app.get('/api/shopping', isAuthenticated, async (req, res) => {
+    const userId = (req.user as any).claims.sub;
+    const lists = await storage.getShoppingLists(userId);
+    res.json(lists);
+  });
+
+  app.post('/api/shopping', isAuthenticated, async (req, res) => {
+    const userId = (req.user as any).claims.sub;
+    const list = await storage.createShoppingList({ ...req.body, userId });
+    res.status(201).json(list);
+  });
+
+  app.delete('/api/shopping/:id', isAuthenticated, async (req, res) => {
+    await storage.deleteShoppingList(Number(req.params.id));
+    res.status(204).send();
+  });
+
+  app.post('/api/shopping/:listId/items', isAuthenticated, async (req, res) => {
+    const item = await storage.createShoppingListItem({ ...req.body, listId: Number(req.params.listId) });
+    res.status(201).json(item);
+  });
+
+  app.patch('/api/shopping/items/:id', isAuthenticated, async (req, res) => {
+    const item = await storage.updateShoppingListItem(Number(req.params.id), req.body);
+    res.json(item);
+  });
+
+  app.delete('/api/shopping/items/:id', isAuthenticated, async (req, res) => {
+    await storage.deleteShoppingListItem(Number(req.params.id));
+    res.status(204).send();
+  });
+
   return httpServer;
 }

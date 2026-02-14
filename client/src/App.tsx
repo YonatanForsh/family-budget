@@ -9,6 +9,7 @@ import NotFound from "@/pages/not-found";
 import Dashboard from "@/pages/Dashboard";
 import Login from "@/pages/Login";
 import Settings from "@/pages/Settings";
+import ShoppingPage from "@/pages/ShoppingPage";
 
 function Router() {
   const { user, isLoading } = useAuth();
@@ -29,6 +30,7 @@ function Router() {
     <Switch>
       <Route path="/" component={Dashboard} />
       <Route path="/settings" component={Settings} />
+      <Route path="/shopping" component={ShoppingPage} />
       <Route component={NotFound} />
     </Switch>
   );

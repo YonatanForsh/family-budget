@@ -32,6 +32,13 @@ export interface IStorage {
   
   // Budget Operations
   moveBudget(fromId: number, toId: number, amount: number): Promise<void>;
+  // Shopping Lists
+  getShoppingLists(userId: string): Promise<(ShoppingList & { items: ShoppingListItem[] })[]>;
+  createShoppingList(list: InsertShoppingList & { userId: string }): Promise<ShoppingList>;
+  deleteShoppingList(id: number): Promise<void>;
+  updateShoppingListItem(id: number, updates: Partial<InsertShoppingListItem>): Promise<ShoppingListItem>;
+  createShoppingListItem(item: InsertShoppingListItem): Promise<ShoppingListItem>;
+  deleteShoppingListItem(id: number): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -39,6 +46,43 @@ export class DatabaseStorage implements IStorage {
   async getCategories(userId: string): Promise<Category[]> {
     return await db.select().from(categories).where(eq(categories.userId, userId));
   }
+
+  // ... (rest of existing class) ...
+
+  async getShoppingLists(userId: string): Promise<(ShoppingList & { items: ShoppingListItem[] })[]> {
+    const lists = await db.select().from(shoppingLists).where(eq(shoppingLists.userId, userId));
+    const results = [];
+    for (const list of lists) {
+      const items = await db.select().from(shoppingListItems).where(eq(shoppingListItems.listId, list.id));
+      results.push({ ...list, items });
+    }
+    return results;
+  }
+
+  async createShoppingList(list: InsertShoppingList & { userId: string }): Promise<ShoppingList> {
+    const [newList] = await db.insert(shoppingLists).values(list).returning();
+    return newList;
+  }
+
+  async deleteShoppingList(id: number): Promise<void> {
+    await db.delete(shoppingListItems).where(eq(shoppingListItems.listId, id));
+    await db.delete(shoppingLists).where(eq(shoppingLists.id, id));
+  }
+
+  async updateShoppingListItem(id: number, updates: Partial<InsertShoppingListItem>): Promise<ShoppingListItem> {
+    const [updated] = await db.update(shoppingListItems).set(updates).where(eq(shoppingListItems.id, id)).returning();
+    return updated;
+  }
+
+  async createShoppingListItem(item: InsertShoppingListItem): Promise<ShoppingListItem> {
+    const [newItem] = await db.insert(shoppingListItems).values(item).returning();
+    return newItem;
+  }
+
+  async deleteShoppingListItem(id: number): Promise<void> {
+    await db.delete(shoppingListItems).where(eq(shoppingListItems.id, id));
+  }
+}
 
   async getCategory(id: number): Promise<Category | undefined> {
     const [category] = await db.select().from(categories).where(eq(categories.id, id));
