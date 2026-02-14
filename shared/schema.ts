@@ -18,14 +18,14 @@ export const expenses = pgTable("expenses", {
   amount: numeric("amount").notNull(),
   description: text("description").notNull(),
   date: timestamp("date").notNull().defaultNow(),
-  categoryId: integer("category_id").references(() => categories.id), // Can be null if general? Let's say required for now or null for "General"
+  categoryId: integer("category_id").references(() => categories.id),
   userId: varchar("user_id").notNull().references(() => users.id),
 });
 
 export const settings = pgTable("settings", {
   id: serial("id").primaryKey(),
   resetDay: integer("reset_day").notNull().default(1),
-  lastResetDate: timestamp("last_reset_date"), // Track when the last reset happened
+  lastResetDate: timestamp("last_reset_date"),
   userId: varchar("user_id").notNull().references(() => users.id).unique(),
 });
 
@@ -47,7 +47,7 @@ export const shoppingLists = pgTable("shopping_lists", {
 export const shoppingListItems = pgTable("shopping_list_items", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
-  amount: text("amount"), // text to allow "1 unit", "2 kg", etc.
+  amount: text("amount"),
   isCompleted: boolean("is_completed").notNull().default(false),
   listId: integer("list_id").notNull().references(() => shoppingLists.id),
 });
@@ -60,42 +60,7 @@ export const budgetHistory = pgTable("budget_history", {
   userId: varchar("user_id").notNull().references(() => users.id),
 });
 
-export const shoppingLists = pgTable("shopping_lists", {
-  id: serial("id").primaryKey(),
-  name: text("name").notNull(),
-  userId: varchar("user_id").notNull().references(() => users.id),
-});
-
-export const shoppingListItems = pgTable("shopping_list_items", {
-  id: serial("id").primaryKey(),
-  name: text("name").notNull(),
-  amount: text("amount"),
-  isCompleted: boolean("is_completed").notNull().default(false),
-  listId: integer("list_id").notNull().references(() => shoppingLists.id),
-});
-
-export const shoppingListsRelations = relations(shoppingLists, ({ one, many }) => ({
-  user: one(users, {
-    fields: [shoppingLists.userId],
-    references: [users.id],
-  }),
-  items: many(shoppingListItems),
-}));
-
-export const shoppingListItemsRelations = relations(shoppingListItems, ({ one }) => ({
-  list: one(shoppingLists, {
-    fields: [shoppingListItems.listId],
-    references: [shoppingLists.id],
-  }),
-}));
-
-export const insertShoppingListSchema = createInsertSchema(shoppingLists).omit({ id: true, userId: true });
-export const insertShoppingListItemSchema = createInsertSchema(shoppingListItems).omit({ id: true });
-
-export type ShoppingList = typeof shoppingLists.$inferSelect;
-export type ShoppingListItem = typeof shoppingListItems.$inferSelect;
-export type InsertShoppingList = z.infer<typeof insertShoppingListSchema>;
-export type InsertShoppingListItem = z.infer<typeof insertShoppingListItemSchema>;
+// Relations
 export const categoriesRelations = relations(categories, ({ one, many }) => ({
   user: one(users, {
     fields: [categories.userId],
@@ -103,6 +68,17 @@ export const categoriesRelations = relations(categories, ({ one, many }) => ({
   }),
   expenses: many(expenses),
   fixedExpenses: many(fixedExpenses),
+}));
+
+export const expensesRelations = relations(expenses, ({ one }) => ({
+  user: one(users, {
+    fields: [expenses.userId],
+    references: [users.id],
+  }),
+  category: one(categories, {
+    fields: [expenses.categoryId],
+    references: [categories.id],
+  }),
 }));
 
 export const fixedExpensesRelations = relations(fixedExpenses, ({ one }) => ({
@@ -149,15 +125,15 @@ export const settingsRelations = relations(settings, ({ one }) => ({
 export const insertCategorySchema = createInsertSchema(categories)
   .omit({ id: true, userId: true })
   .extend({
-    budgetLimit: z.number().or(z.string().regex(/^\d+(\.\d{1,2})?$/)), // Accept number or numeric string
+    budgetLimit: z.number().or(z.string().regex(/^\d+(\.\d{1,2})?$/)),
   });
 
 export const insertExpenseSchema = createInsertSchema(expenses)
   .omit({ id: true, userId: true })
   .extend({
     amount: z.number().or(z.string().regex(/^\-?\d+(\.\d{1,2})?$/)),
-    categoryId: z.number().nullable().optional(), // allow null or undefined
-    date: z.coerce.date(), // Ensure date string is parsed
+    categoryId: z.number().nullable().optional(),
+    date: z.coerce.date(),
   });
 
 export const insertSettingsSchema = createInsertSchema(settings)
@@ -177,7 +153,6 @@ export const insertShoppingListItemSchema = createInsertSchema(shoppingListItems
 
 export const insertBudgetHistorySchema = createInsertSchema(budgetHistory)
   .omit({ id: true });
-
 
 // Types
 export type Category = typeof categories.$inferSelect;

@@ -1,9 +1,12 @@
 import { 
   users, categories, expenses, settings,
+  shoppingLists, shoppingListItems,
   type User, type InsertUser,
   type Category, type InsertCategory,
   type Expense, type InsertExpense,
   type Settings, type InsertSettings,
+  type ShoppingList, type ShoppingListItem,
+  type InsertShoppingList, type InsertShoppingListItem,
   type MonthlyStats
 } from "@shared/schema";
 import { db } from "./db";
@@ -82,8 +85,6 @@ export class DatabaseStorage implements IStorage {
   async deleteShoppingListItem(id: number): Promise<void> {
     await db.delete(shoppingListItems).where(eq(shoppingListItems.id, id));
   }
-}
-
   async getCategory(id: number): Promise<Category | undefined> {
     const [category] = await db.select().from(categories).where(eq(categories.id, id));
     return category;
