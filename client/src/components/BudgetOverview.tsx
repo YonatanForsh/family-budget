@@ -4,6 +4,7 @@ import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TrendingUp, AlertCircle } from "lucide-react";
 import { motion } from "framer-motion";
+import * as React from "react";
 
 export function BudgetOverview() {
   const { data: stats, isLoading } = useMonthlyStats();

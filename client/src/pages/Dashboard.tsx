@@ -4,6 +4,7 @@ import { BudgetOverview } from "@/components/BudgetOverview";
 import { CategoryList } from "@/components/CategoryList";
 import { RecentExpenses } from "@/components/RecentExpenses";
 import { motion } from "framer-motion";
+import * as React from "react";
 
 export default function Dashboard() {
   return (
