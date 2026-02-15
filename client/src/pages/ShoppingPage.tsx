@@ -3,12 +3,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Trash2, Plus, Loader2, ShoppingBasket } from "lucide-react";
+import { Trash2, Plus, Loader2, ShoppingBasket, RotateCcw } from "lucide-react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useState } from "react";
 import { ShoppingList, ShoppingListItem } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
 
 export default function ShoppingPage() {
   const { toast } = useToast();
@@ -34,7 +35,24 @@ export default function ShoppingPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/shopping"] });
+      toast({ title: "הרשימה נמחקה" });
     },
+  });
+
+  const resetListMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const list = lists?.find(l => l.id === id);
+      if (!list) return;
+      for (const item of list.items) {
+        if (item.isCompleted) {
+          await apiRequest("PATCH", `/api/shopping/items/${item.id}`, { isCompleted: false });
+        }
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/shopping"] });
+      toast({ title: "הרשימה אופסה" });
+    }
   });
 
   const addItemMutation = useMutation({
@@ -98,11 +116,16 @@ export default function ShoppingPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {lists?.map((list) => (
             <Card key={list.id} className="h-full">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0">
-                <CardTitle className="text-xl">{list.name}</CardTitle>
-                <Button variant="ghost" size="icon" onClick={() => deleteListMutation.mutate(list.id)} className="text-destructive">
-                  <Trash2 className="h-4 w-4" />
-                </Button>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-xl font-bold">{list.name}</CardTitle>
+                <div className="flex gap-1">
+                  <Button variant="ghost" size="icon" onClick={() => resetListMutation.mutate(list.id)} title="אפס רשימה" className="h-8 w-8">
+                    <RotateCcw className={cn("h-4 w-4", resetListMutation.isPending && "animate-spin")} />
+                  </Button>
+                  <Button variant="ghost" size="icon" onClick={() => deleteListMutation.mutate(list.id)} className="text-destructive h-8 w-8">
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">

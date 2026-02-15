@@ -2,7 +2,8 @@ import { useMonthlyStats } from "@/hooks/use-budget";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
 import { Skeleton } from "@/components/ui/skeleton";
-import { TrendingDown, TrendingUp, AlertCircle } from "lucide-react";
+import { TrendingUp, AlertCircle } from "lucide-react";
+import { motion } from "framer-motion";
 
 export function BudgetOverview() {
   const { data: stats, isLoading } = useMonthlyStats();
@@ -16,9 +17,6 @@ export function BudgetOverview() {
   const totalSpent = Number(stats.totalSpent);
   const totalBudget = Number(stats.totalBudget);
   
-  // Half-circle gauge logic
-  // We want to show spending as a portion of the semi-circle
-  // If we exceed budget, the gauge stays full but we show the total
   const percentage = totalBudget > 0 
     ? Math.round((totalSpent / totalBudget) * 100) 
     : 0;
@@ -31,6 +29,9 @@ export function BudgetOverview() {
     { name: "נותר", value: 100 - displayPercentage, color: "#e2e8f0" },
   ];
 
+  // Needle logic
+  const angle = 180 - (displayPercentage / 100) * 180;
+  
   return (
     <Card className="border-none shadow-lg bg-gradient-to-br from-white to-purple-50 dark:from-gray-900 dark:to-gray-800 overflow-hidden relative">
       <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary to-secondary" />
@@ -44,7 +45,7 @@ export function BudgetOverview() {
       </CardHeader>
       <CardContent>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
-          <div className="h-[180px] w-full relative flex items-center justify-center">
+          <div className="h-[200px] w-full relative flex items-center justify-center">
              <ResponsiveContainer width="100%" height="100%">
                <PieChart>
                  <Pie
@@ -65,6 +66,19 @@ export function BudgetOverview() {
                  </Pie>
                </PieChart>
              </ResponsiveContainer>
+             
+             {/* Custom Needle */}
+             <div className="absolute top-[80%] left-[50%] w-full h-full flex items-center justify-center pointer-events-none origin-bottom">
+                <motion.div 
+                  initial={{ rotate: 180 }}
+                  animate={{ rotate: 180 - (displayPercentage * 1.8) }}
+                  transition={{ duration: 1.5, ease: "easeOut" }}
+                  className="absolute w-1 h-20 bg-foreground/80 rounded-full"
+                  style={{ bottom: "0", transformOrigin: "bottom center" }}
+                />
+                <div className="absolute w-4 h-4 bg-foreground rounded-full bottom-[-8px]" />
+             </div>
+
              <div className="absolute top-[60%] left-0 w-full flex flex-col items-center justify-center pointer-events-none">
                <span className={`text-4xl font-black ${isOverBudget ? 'text-red-500' : 'text-foreground'}`}>{percentage}%</span>
                <span className="text-sm text-muted-foreground font-medium">מהתקציב הכולל</span>

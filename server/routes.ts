@@ -194,5 +194,23 @@ export async function registerRoutes(
     res.status(204).send();
   });
 
+  // Fixed Expenses
+  app.get('/api/fixed-expenses', isAuthenticated, async (req, res) => {
+    const userId = (req.user as any).claims.sub;
+    const expenses = await storage.getFixedExpenses(userId);
+    res.json(expenses);
+  });
+
+  app.post('/api/fixed-expenses', isAuthenticated, async (req, res) => {
+    const userId = (req.user as any).claims.sub;
+    const expense = await storage.createFixedExpense({ ...req.body, userId });
+    res.status(201).json(expense);
+  });
+
+  app.delete('/api/fixed-expenses/:id', isAuthenticated, async (req, res) => {
+    await storage.deleteFixedExpense(Number(req.params.id));
+    res.status(204).send();
+  });
+
   return httpServer;
 }

@@ -1,12 +1,14 @@
 import { 
   users, categories, expenses, settings,
-  shoppingLists, shoppingListItems,
+  shoppingLists, shoppingListItems, fixedExpenses, budgetHistory,
   type User, type InsertUser,
   type Category, type InsertCategory,
   type Expense, type InsertExpense,
   type Settings, type InsertSettings,
   type ShoppingList, type ShoppingListItem,
   type InsertShoppingList, type InsertShoppingListItem,
+  type FixedExpense, type InsertFixedExpense,
+  type BudgetHistory,
   type MonthlyStats
 } from "@shared/schema";
 import { db } from "./db";
@@ -35,6 +37,7 @@ export interface IStorage {
   
   // Budget Operations
   moveBudget(fromId: number, toId: number, amount: number): Promise<void>;
+
   // Shopping Lists
   getShoppingLists(userId: string): Promise<(ShoppingList & { items: ShoppingListItem[] })[]>;
   createShoppingList(list: InsertShoppingList & { userId: string }): Promise<ShoppingList>;
@@ -42,49 +45,22 @@ export interface IStorage {
   updateShoppingListItem(id: number, updates: Partial<InsertShoppingListItem>): Promise<ShoppingListItem>;
   createShoppingListItem(item: InsertShoppingListItem): Promise<ShoppingListItem>;
   deleteShoppingListItem(id: number): Promise<void>;
+
+  // Fixed Expenses
+  getFixedExpenses(userId: string): Promise<FixedExpense[]>;
+  createFixedExpense(expense: InsertFixedExpense & { userId: string }): Promise<FixedExpense>;
+  deleteFixedExpense(id: number): Promise<void>;
+  // Reset Logic
+  checkAndPerformReset(userId: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
   // Categories
   async getCategories(userId: string): Promise<Category[]> {
+    await this.checkAndPerformReset(userId);
     return await db.select().from(categories).where(eq(categories.userId, userId));
   }
 
-  // ... (rest of existing class) ...
-
-  async getShoppingLists(userId: string): Promise<(ShoppingList & { items: ShoppingListItem[] })[]> {
-    const lists = await db.select().from(shoppingLists).where(eq(shoppingLists.userId, userId));
-    const results = [];
-    for (const list of lists) {
-      const items = await db.select().from(shoppingListItems).where(eq(shoppingListItems.listId, list.id));
-      results.push({ ...list, items });
-    }
-    return results;
-  }
-
-  async createShoppingList(list: InsertShoppingList & { userId: string }): Promise<ShoppingList> {
-    const [newList] = await db.insert(shoppingLists).values(list).returning();
-    return newList;
-  }
-
-  async deleteShoppingList(id: number): Promise<void> {
-    await db.delete(shoppingListItems).where(eq(shoppingListItems.listId, id));
-    await db.delete(shoppingLists).where(eq(shoppingLists.id, id));
-  }
-
-  async updateShoppingListItem(id: number, updates: Partial<InsertShoppingListItem>): Promise<ShoppingListItem> {
-    const [updated] = await db.update(shoppingListItems).set(updates).where(eq(shoppingListItems.id, id)).returning();
-    return updated;
-  }
-
-  async createShoppingListItem(item: InsertShoppingListItem): Promise<ShoppingListItem> {
-    const [newItem] = await db.insert(shoppingListItems).values(item).returning();
-    return newItem;
-  }
-
-  async deleteShoppingListItem(id: number): Promise<void> {
-    await db.delete(shoppingListItems).where(eq(shoppingListItems.id, id));
-  }
   async getCategory(id: number): Promise<Category | undefined> {
     const [category] = await db.select().from(categories).where(eq(categories.id, id));
     return category;
@@ -104,12 +80,6 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteCategory(id: number): Promise<void> {
-    // Should probably check for expenses first or cascade? 
-    // For now, let's assume we can just delete and expenses become category-less or we restrict.
-    // Drizzle relations don't enforce cascade delete automatically unless defined in DB.
-    // Let's set expenses categoryId to null first (optional) or just delete.
-    // If we delete category, expenses with that category ID might cause error if FK constraint exists.
-    // Schema defines FK. So we should probably nullify expenses first.
     await db.update(expenses).set({ categoryId: null }).where(eq(expenses.categoryId, id));
     await db.delete(categories).where(eq(categories.id, id));
   }
@@ -189,18 +159,16 @@ export class DatabaseStorage implements IStorage {
     
     const now = new Date();
     const currentYear = now.getFullYear();
-    const currentMonth = now.getMonth(); // 0-indexed
+    const currentMonth = now.getMonth(); 
     
     let startDate: Date;
     let endDate: Date;
 
     if (month) {
-      // If a specific month is requested (YYYY-MM), we use the resetDay for that month
       const [year, m] = month.split('-').map(Number);
       startDate = new Date(year, m - 1, resetDay);
       endDate = new Date(year, m, resetDay);
     } else {
-      // Logic for current budget cycle based on resetDay
       if (now.getDate() >= resetDay) {
         startDate = new Date(currentYear, currentMonth, resetDay);
         endDate = new Date(currentYear, currentMonth + 1, resetDay);
@@ -210,10 +178,8 @@ export class DatabaseStorage implements IStorage {
       }
     }
 
-    // Get all categories
     const userCategories = await this.getCategories(userId);
     
-    // Get expenses for the period
     const userExpenses = await db.select()
       .from(expenses)
       .where(and(
@@ -222,12 +188,10 @@ export class DatabaseStorage implements IStorage {
         lte(expenses.date, endDate)
       ));
 
-    // Calculate totals
     const totalBudget = userCategories.reduce((sum, cat) => sum + Number(cat.budgetLimit), 0);
     const totalSpent = userExpenses.reduce((sum, exp) => sum + Number(exp.amount), 0);
     const remaining = totalBudget - totalSpent;
 
-    // Calculate per-category stats
     const categoriesStats = userCategories.map(cat => {
       const catExpenses = userExpenses.filter(exp => exp.categoryId === cat.id);
       const spent = catExpenses.reduce((sum, exp) => sum + Number(exp.amount), 0);
@@ -248,13 +212,7 @@ export class DatabaseStorage implements IStorage {
 
   // Budget Operations
   async moveBudget(fromId: number, toId: number, amount: number): Promise<void> {
-    // This should ideally be a transaction
     await db.transaction(async (tx) => {
-      // Deduct from source
-      // Need to read current limits first? 
-      // Or just do SQL update decrement/increment.
-      // Since budgetLimit is numeric string, we might need to cast or read-update.
-      
       const [fromCat] = await tx.select().from(categories).where(eq(categories.id, fromId));
       const [toCat] = await tx.select().from(categories).where(eq(categories.id, toId));
       
@@ -272,6 +230,123 @@ export class DatabaseStorage implements IStorage {
       await tx.update(categories)
         .set({ budgetLimit: newToLimit.toString() })
         .where(eq(categories.id, toId));
+    });
+  }
+
+  // Shopping Lists
+  async getShoppingLists(userId: string): Promise<(ShoppingList & { items: ShoppingListItem[] })[]> {
+    const lists = await db.select().from(shoppingLists).where(eq(shoppingLists.userId, userId));
+    const results = [];
+    for (const list of lists) {
+      const items = await db.select().from(shoppingListItems).where(eq(shoppingListItems.listId, list.id));
+      results.push({ ...list, items });
+    }
+    return results;
+  }
+
+  async createShoppingList(list: InsertShoppingList & { userId: string }): Promise<ShoppingList> {
+    const [newList] = await db.insert(shoppingLists).values(list).returning();
+    return newList;
+  }
+
+  async deleteShoppingList(id: number): Promise<void> {
+    await db.delete(shoppingListItems).where(eq(shoppingListItems.listId, id));
+    await db.delete(shoppingLists).where(eq(shoppingLists.id, id));
+  }
+
+  async updateShoppingListItem(id: number, updates: Partial<InsertShoppingListItem>): Promise<ShoppingListItem> {
+    const [updated] = await db.update(shoppingListItems).set(updates).where(eq(shoppingListItems.id, id)).returning();
+    return updated;
+  }
+
+  async createShoppingListItem(item: InsertShoppingListItem): Promise<ShoppingListItem> {
+    const [newItem] = await db.insert(shoppingListItems).values(item).returning();
+    return newItem;
+  }
+
+  async deleteShoppingListItem(id: number): Promise<void> {
+    await db.delete(shoppingListItems).where(eq(shoppingListItems.id, id));
+  }
+
+  // Fixed Expenses
+  async getFixedExpenses(userId: string): Promise<FixedExpense[]> {
+    return await db.select().from(fixedExpenses).where(eq(fixedExpenses.userId, userId));
+  }
+
+  async createFixedExpense(expense: InsertFixedExpense & { userId: string }): Promise<FixedExpense> {
+    const [newExpense] = await db.insert(fixedExpenses).values(expense).returning();
+    return newExpense;
+  }
+
+  async deleteFixedExpense(id: number): Promise<void> {
+    await db.delete(fixedExpenses).where(eq(fixedExpenses.id, id));
+  }
+  // Reset Logic
+  async checkAndPerformReset(userId: string): Promise<void> {
+    const [userSettings] = await db.select().from(settings).where(eq(settings.userId, userId));
+    if (!userSettings) return;
+
+    const now = new Date();
+    const currentMonthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    
+    // Determine the start of the current budget cycle
+    const resetDay = userSettings.resetDay;
+    let cycleStartDate: Date;
+    if (now.getDate() >= resetDay) {
+      cycleStartDate = new Date(now.getFullYear(), now.getMonth(), resetDay);
+    } else {
+      cycleStartDate = new Date(now.getFullYear(), now.getMonth() - 1, resetDay);
+    }
+
+    // Check if we already reset for this cycle
+    if (userSettings.lastResetDate && new Date(userSettings.lastResetDate) >= cycleStartDate) {
+      return;
+    }
+
+    // Perform Reset
+    await db.transaction(async (tx) => {
+      // 1. Archive previous cycle stats to History
+      const prevMonth = new Date(cycleStartDate);
+      prevMonth.setMonth(prevMonth.getMonth() - 1);
+      const prevMonthStr = `${prevMonth.getFullYear()}-${String(prevMonth.getMonth() + 1).padStart(2, '0')}`;
+      
+      // Get all categories and expenses for the PREVIOUS cycle
+      const cats = await tx.select().from(categories).where(eq(categories.userId, userId));
+      const prevCycleStart = new Date(prevMonth.getFullYear(), prevMonth.getMonth(), resetDay);
+      const prevCycleEnd = new Date(cycleStartDate);
+      
+      const exps = await tx.select().from(expenses).where(and(
+        eq(expenses.userId, userId),
+        gte(expenses.date, prevCycleStart),
+        lte(expenses.date, prevCycleEnd)
+      ));
+
+      const totalBudget = cats.reduce((sum, c) => sum + Number(c.budgetLimit), 0).toString();
+      const totalSpent = exps.reduce((sum, e) => sum + Number(e.amount), 0).toString();
+
+      await tx.insert(budgetHistory).values({
+        userId,
+        month: prevMonthStr,
+        totalBudget,
+        totalSpent
+      });
+
+      // 2. Inject Fixed Expenses for the NEW cycle
+      const fixedExps = await tx.select().from(fixedExpenses).where(eq(fixedExpenses.userId, userId));
+      for (const fe of fixedExps) {
+        await tx.insert(expenses).values({
+          userId,
+          amount: fe.amount,
+          description: `הוצאה קבועה: ${fe.name}`,
+          categoryId: fe.categoryId,
+          date: now
+        });
+      }
+
+      // 3. Update lastResetDate
+      await tx.update(settings)
+        .set({ lastResetDate: now })
+        .where(eq(settings.userId, userId));
     });
   }
 }
